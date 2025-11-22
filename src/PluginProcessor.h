@@ -37,5 +37,19 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+    // Flanger parameters
+    static constexpr float MAX_DELAY_TIME = 0.010f; // 10ms max delay
+    static constexpr float LFO_RATE = 0.25f;         // LFO frequency in Hz
+    static constexpr float DEPTH = 0.7f;             // Modulation depth (0-1)
+    static constexpr float FEEDBACK = 0.5f;          // Feedback amount
+    static constexpr float MIX = 0.5f;               // Dry/wet mix
+
+    // Flanger state
+    juce::AudioBuffer<float> delayBuffer;
+    int delayBufferLength = 0;
+    int writePosition = 0;
+    float lfoPhase = 0.0f;
+    double currentSampleRate = 44100.0;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FlangeriftAudioProcessor)
 };

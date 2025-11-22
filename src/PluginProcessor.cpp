@@ -84,7 +84,17 @@ void FlangeriftAudioProcessor::changeProgramName (int index, const juce::String&
 
 void FlangeriftAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    currentSampleRate = sampleRate;
+
+    // Allocate delay buffer
+    delayBufferLength = static_cast<int>(MAX_DELAY_TIME * sampleRate) + 1;
+    delayBuffer.setSize(2, delayBufferLength);
+    delayBuffer.clear();
+
+    writePosition = 0;
+    lfoPhase = 0.0f;
 }
 
 void FlangeriftAudioProcessor::releaseResources()
@@ -124,7 +134,61 @@ void FlangeriftAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Simple pass-through for now
+    // Flanger effect implementation
+    const int numSamples = buffer.getNumSamples();
+    const float lfoIncrement = LFO_RATE / static_cast<float>(currentSampleRate);
+
+    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        auto* delayData = delayBuffer.getWritePointer(channel);
+        int localWritePosition = writePosition;
+        float localLfoPhase = lfoPhase;
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            const float in = channelData[sample];
+
+            // Calculate LFO value (sine wave 0-1)
+            const float lfo = 0.5f + 0.5f * std::sin(2.0f * juce::MathConstants<float>::pi * localLfoPhase);
+
+            // Calculate delay time in samples (modulated by LFO)
+            const float delayTimeSamples = lfo * DEPTH * delayBufferLength;
+
+            // Calculate read position with fractional part
+            float readPosition = localWritePosition - delayTimeSamples;
+            if (readPosition < 0.0f)
+                readPosition += delayBufferLength;
+
+            // Linear interpolation for smooth delay
+            const int readIndex1 = static_cast<int>(readPosition);
+            const int readIndex2 = (readIndex1 + 1) % delayBufferLength;
+            const float fraction = readPosition - readIndex1;
+
+            const float delayed = delayData[readIndex1] * (1.0f - fraction) +
+                                  delayData[readIndex2] * fraction;
+
+            // Write to delay buffer (input + feedback)
+            delayData[localWritePosition] = in + delayed * FEEDBACK;
+
+            // Mix dry and wet signals
+            channelData[sample] = in * (1.0f - MIX) + delayed * MIX;
+
+            // Increment write position
+            localWritePosition = (localWritePosition + 1) % delayBufferLength;
+
+            // Increment LFO phase
+            localLfoPhase += lfoIncrement;
+            if (localLfoPhase >= 1.0f)
+                localLfoPhase -= 1.0f;
+        }
+    }
+
+    // Update global state
+    writePosition = (writePosition + numSamples) % delayBufferLength;
+    lfoPhase += lfoIncrement * numSamples;
+    while (lfoPhase >= 1.0f)
+        lfoPhase -= 1.0f;
 }
 
 bool FlangeriftAudioProcessor::hasEditor() const
