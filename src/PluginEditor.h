@@ -1,19 +1,18 @@
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 
-class FlangeriftEditor : public juce::AudioProcessorEditor
+class FlangeriftAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
-    FlangeriftEditor(FlangeriftProcessor&);
-    ~FlangeriftEditor() override;
+    explicit FlangeriftAudioProcessorEditor (FlangeriftAudioProcessor&);
+    ~FlangeriftAudioProcessorEditor() override;
 
-    void paint(juce::Graphics&) override;
+    void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
-    FlangeriftProcessor& audioProcessor;
+    FlangeriftAudioProcessor& processorRef;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlangeriftEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FlangeriftAudioProcessorEditor)
 };
