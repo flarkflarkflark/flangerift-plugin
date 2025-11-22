@@ -1,0 +1,163 @@
+name: Build FLANGERIFT Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libasound2-dev \
+          libx11-dev \
+          libxcb1-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libgl1-mesa-dev \
+          libfreetype6-dev \
+          libwebkit2gtk-4.0-dev
+    
+    - name: Get JUCE
+      run: |
+        git clone --depth 1 --branch 7.0.9 https://github.com/juce-framework/JUCE.git
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DJUCE_DIR=${{ github.workspace }}/JUCE
+    
+    - name: Build
+      run: cmake --build build --config Release -j$(nproc)
+    
+    - name: Package Linux builds
+      run: |
+        mkdir -p artifacts/linux
+        cp -r build/FLANGERIFT_artefacts/Release/VST3/*.vst3 artifacts/linux/ || true
+        cp -r build/FLANGERIFT_artefacts/Release/CLAP/*.clap artifacts/linux/ || true
+        cd artifacts/linux
+        tar -czf ../FLANGERIFT-1.0.0-Linux-x64.tar.gz .
+    
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: FLANGERIFT-Linux
+        path: artifacts/FLANGERIFT-1.0.0-Linux-x64.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - name: Get JUCE
+      run: |
+        git clone --depth 1 --branch 7.0.9 https://github.com/juce-framework/JUCE.git
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DJUCE_DIR=${{ github.workspace }}/JUCE
+    
+    - name: Build
+      run: cmake --build build --config Release -j
+    
+    - name: Package Windows builds
+      run: |
+        mkdir -p artifacts/windows
+        Copy-Item -Recurse build/FLANGERIFT_artefacts/Release/VST3/*.vst3 artifacts/windows/ -ErrorAction SilentlyContinue
+        Copy-Item -Recurse build/FLANGERIFT_artefacts/Release/CLAP/*.clap artifacts/windows/ -ErrorAction SilentlyContinue
+        Compress-Archive -Path artifacts/windows/* -DestinationPath artifacts/FLANGERIFT-1.0.0-Windows-x64.zip
+      shell: powershell
+    
+    - name: Upload Windows artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: FLANGERIFT-Windows
+        path: artifacts/FLANGERIFT-1.0.0-Windows-x64.zip
+
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - name: Get JUCE
+      run: |
+        git clone --depth 1 --branch 7.0.9 https://github.com/juce-framework/JUCE.git
+    
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+          -DJUCE_DIR=${{ github.workspace }}/JUCE
+    
+    - name: Build
+      run: cmake --build build --config Release -j$(sysctl -n hw.ncpu)
+    
+    - name: Package macOS builds
+      run: |
+        mkdir -p artifacts/macos
+        cp -r build/FLANGERIFT_artefacts/Release/VST3/*.vst3 artifacts/macos/ || true
+        cp -r build/FLANGERIFT_artefacts/Release/CLAP/*.clap artifacts/macos/ || true
+        cd artifacts/macos
+        tar -czf ../FLANGERIFT-1.0.0-macOS-Universal.tar.gz .
+    
+    - name: Upload macOS artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: FLANGERIFT-macOS
+        path: artifacts/FLANGERIFT-1.0.0-macOS-Universal.tar.gz
+
+  create-release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Display structure
+      run: ls -R
+    
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.0-${{ github.run_number }}
+        name: FLANGERIFT v1.0.0 Build ${{ github.run_number }}
+        files: |
+          FLANGERIFT-Linux/FLANGERIFT-1.0.0-Linux-x64.tar.gz
+          FLANGERIFT-Windows/FLANGERIFT-1.0.0-Windows-x64.zip
+          FLANGERIFT-macOS/FLANGERIFT-1.0.0-macOS-Universal.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
