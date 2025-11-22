@@ -11,7 +11,7 @@ else()
 endif()
 
 juce_add_plugin(FLANGERIFT
-    COMPANY_NAME "CustomAudio"
+    COMPANY_NAME "flarkAUDIO"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
@@ -37,6 +37,7 @@ target_compile_definitions(FLANGERIFT
 target_link_libraries(FLANGERIFT
     PRIVATE
         juce::juce_audio_utils
+        juce::juce_dsp
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
