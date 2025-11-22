@@ -13,7 +13,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     
@@ -57,7 +57,7 @@ jobs:
         tar -czf ../FLANGERIFT-1.0.0-Linux-x64.tar.gz .
     
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: FLANGERIFT-Linux
         path: artifacts/FLANGERIFT-1.0.0-Linux-x64.tar.gz
@@ -93,7 +93,7 @@ jobs:
       shell: powershell
     
     - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: FLANGERIFT-Windows
         path: artifacts/FLANGERIFT-1.0.0-Windows-x64.zip
@@ -131,7 +131,7 @@ jobs:
         tar -czf ../FLANGERIFT-1.0.0-macOS-Universal.tar.gz .
     
     - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: FLANGERIFT-macOS
         path: artifacts/FLANGERIFT-1.0.0-macOS-Universal.tar.gz
@@ -142,7 +142,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Display structure
       run: ls -R
