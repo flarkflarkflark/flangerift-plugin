@@ -9,12 +9,18 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
+
+    #ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+    #endif
+
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
 
     const juce::String getName() const override;
+
     bool acceptsMidi() const override;
     bool producesMidi() const override;
     bool isMidiEffect() const override;
@@ -39,9 +45,9 @@ private:
     juce::AudioParameterFloat* filterMix;
 
     juce::AudioBuffer<float> delayBuffer;
-    int writePosition = 0;
-    float lfoPhase = 0.0f;
-    double currentSampleRate = 44100.0;
+    int writePosition;
+    float lfoPhase;
+    double currentSampleRate;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlangeriftProcessor)
 };
