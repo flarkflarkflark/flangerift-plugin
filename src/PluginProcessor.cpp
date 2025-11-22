@@ -1,229 +1,153 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-FlangeriftProcessor::FlangeriftProcessor()
+FlangeriftAudioProcessor::FlangeriftAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-    : AudioProcessor(BusesProperties()
-                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+     : AudioProcessor (BusesProperties()
+                     #if ! JucePlugin_IsMidiEffect
+                      #if ! JucePlugin_IsSynth
+                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                      #endif
+                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                     #endif
+                       )
 #endif
-    , writePosition(0)
-    , lfoPhase(0.0f)
-    , currentSampleRate(44100.0)
-{
-    addParameter(flangerRate = new juce::AudioParameterFloat(
-        "flangerRate", "Flanger Rate", 0.1f, 10.0f, 0.5f));
-    
-    addParameter(flangerDepth = new juce::AudioParameterFloat(
-        "flangerDepth", "Flanger Depth", 0.0f, 1.0f, 0.5f));
-    
-    addParameter(flangerFeedback = new juce::AudioParameterFloat(
-        "flangerFeedback", "Flanger Feedback", 0.0f, 0.9f, 0.3f));
-    
-    addParameter(flangerMix = new juce::AudioParameterFloat(
-        "flangerMix", "Flanger Mix", 0.0f, 1.0f, 0.5f));
-    
-    addParameter(filterCutoff = new juce::AudioParameterFloat(
-        "filterCutoff", "Filter Cutoff", 20.0f, 20000.0f, 1000.0f));
-    
-    addParameter(filterResonance = new juce::AudioParameterFloat(
-        "filterResonance", "Filter Resonance", 0.0f, 1.0f, 0.5f));
-    
-    addParameter(filterMix = new juce::AudioParameterFloat(
-        "filterMix", "Filter Mix", 0.0f, 1.0f, 0.5f));
-}
-
-FlangeriftProcessor::~FlangeriftProcessor()
 {
 }
 
-const juce::String FlangeriftProcessor::getName() const
+FlangeriftAudioProcessor::~FlangeriftAudioProcessor()
+{
+}
+
+const juce::String FlangeriftAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool FlangeriftProcessor::acceptsMidi() const
+bool FlangeriftAudioProcessor::acceptsMidi() const
 {
-    #if JucePlugin_WantsMidiInput
+   #if JucePlugin_WantsMidiInput
     return true;
-    #else
+   #else
     return false;
-    #endif
+   #endif
 }
 
-bool FlangeriftProcessor::producesMidi() const
+bool FlangeriftAudioProcessor::producesMidi() const
 {
-    #if JucePlugin_ProducesMidiOutput
+   #if JucePlugin_ProducesMidiOutput
     return true;
-    #else
+   #else
     return false;
-    #endif
+   #endif
 }
 
-bool FlangeriftProcessor::isMidiEffect() const
+bool FlangeriftAudioProcessor::isMidiEffect() const
 {
-    #if JucePlugin_IsMidiEffect
+   #if JucePlugin_IsMidiEffect
     return true;
-    #else
+   #else
     return false;
-    #endif
+   #endif
 }
 
-double FlangeriftProcessor::getTailLengthSeconds() const
+double FlangeriftAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int FlangeriftProcessor::getNumPrograms()
+int FlangeriftAudioProcessor::getNumPrograms()
 {
     return 1;
 }
 
-int FlangeriftProcessor::getCurrentProgram()
+int FlangeriftAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void FlangeriftProcessor::setCurrentProgram(int index)
+void FlangeriftAudioProcessor::setCurrentProgram (int index)
 {
-    juce::ignoreUnused(index);
+    juce::ignoreUnused (index);
 }
 
-const juce::String FlangeriftProcessor::getProgramName(int index)
+const juce::String FlangeriftAudioProcessor::getProgramName (int index)
 {
-    juce::ignoreUnused(index);
+    juce::ignoreUnused (index);
     return {};
 }
 
-void FlangeriftProcessor::changeProgramName(int index, const juce::String& newName)
+void FlangeriftAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
-    juce::ignoreUnused(index, newName);
+    juce::ignoreUnused (index, newName);
 }
 
-void FlangeriftProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void FlangeriftAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    juce::ignoreUnused(samplesPerBlock);
-    currentSampleRate = sampleRate;
-    
-    int maxDelaySamples = static_cast<int>(sampleRate * 0.02);
-    delayBuffer.setSize(2, maxDelaySamples);
-    delayBuffer.clear();
-    writePosition = 0;
-    lfoPhase = 0.0f;
+    juce::ignoreUnused (sampleRate, samplesPerBlock);
 }
 
-void FlangeriftProcessor::releaseResources()
+void FlangeriftAudioProcessor::releaseResources()
 {
-    delayBuffer.setSize(0, 0);
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool FlangeriftProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+bool FlangeriftAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
+  #if JucePlugin_IsMidiEffect
+    juce::ignoreUnused (layouts);
+    return true;
+  #else
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
+   #if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
+   #endif
 
     return true;
+  #endif
 }
 #endif
 
-void FlangeriftProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
-                                       juce::MidiBuffer& midiMessages)
+void FlangeriftAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
+                                              juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused(midiMessages);
-    
+    juce::ignoreUnused (midiMessages);
+
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels = getTotalNumInputChannels();
+    auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
-    auto numSamples = buffer.getNumSamples();
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, numSamples);
+        buffer.clear (i, 0, buffer.getNumSamples());
 
-    if (delayBuffer.getNumSamples() == 0)
-        return;
-
-    for (int sample = 0; sample < numSamples; ++sample)
-    {
-        float lfo = std::sin(lfoPhase * 2.0f * juce::MathConstants<float>::pi);
-        lfoPhase += *flangerRate / static_cast<float>(currentSampleRate);
-        if (lfoPhase >= 1.0f)
-            lfoPhase -= 1.0f;
-
-        float minDelay = static_cast<float>(currentSampleRate) * 0.002f;
-        float maxDelay = static_cast<float>(currentSampleRate) * 0.01f;
-        float delayTime = minDelay + (maxDelay - minDelay) * 
-                          (0.5f + 0.5f * lfo * *flangerDepth);
-
-        for (int channel = 0; channel < totalNumInputChannels; ++channel)
-        {
-            auto* channelData = buffer.getWritePointer(channel);
-            auto* delayData = delayBuffer.getWritePointer(channel);
-            
-            float input = channelData[sample];
-            
-            float readPos = static_cast<float>(writePosition) - delayTime;
-            while (readPos < 0.0f)
-                readPos += static_cast<float>(delayBuffer.getNumSamples());
-            
-            int readPos1 = static_cast<int>(readPos);
-            int readPos2 = (readPos1 + 1) % delayBuffer.getNumSamples();
-            float frac = readPos - static_cast<float>(readPos1);
-            
-            float delaySample = delayData[readPos1] * (1.0f - frac) + 
-                               delayData[readPos2] * frac;
-            
-            delayData[writePosition] = input + delaySample * *flangerFeedback;
-            
-            channelData[sample] = input * (1.0f - *flangerMix) + 
-                                 delaySample * *flangerMix;
-        }
-        
-        writePosition = (writePosition + 1) % delayBuffer.getNumSamples();
-    }
+    // Simple pass-through for now
 }
 
-bool FlangeriftProcessor::hasEditor() const
+bool FlangeriftAudioProcessor::hasEditor() const
 {
     return true;
 }
 
-juce::AudioProcessorEditor* FlangeriftProcessor::createEditor()
+juce::AudioProcessorEditor* FlangeriftAudioProcessor::createEditor()
 {
-    return new FlangeriftEditor(*this);
+    return new FlangeriftAudioProcessorEditor (*this);
 }
 
-void FlangeriftProcessor::getStateInformation(juce::MemoryBlock& destData)
+void FlangeriftAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::MemoryOutputStream stream(destData, true);
-    
-    stream.writeFloat(*flangerRate);
-    stream.writeFloat(*flangerDepth);
-    stream.writeFloat(*flangerFeedback);
-    stream.writeFloat(*flangerMix);
-    stream.writeFloat(*filterCutoff);
-    stream.writeFloat(*filterResonance);
-    stream.writeFloat(*filterMix);
+    juce::ignoreUnused (destData);
 }
 
-void FlangeriftProcessor::setStateInformation(const void* data, int sizeInBytes)
+void FlangeriftAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::MemoryInputStream stream(data, static_cast<size_t>(sizeInBytes), false);
-    
-    *flangerRate = stream.readFloat();
-    *flangerDepth = stream.readFloat();
-    *flangerFeedback = stream.readFloat();
-    *flangerMix = stream.readFloat();
-    *filterCutoff = stream.readFloat();
-    *filterResonance = stream.readFloat();
-    *filterMix = stream.readFloat();
+    juce::ignoreUnused (data, sizeInBytes);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new FlangeriftProcessor();
+    return new FlangeriftAudioProcessor();
 }
