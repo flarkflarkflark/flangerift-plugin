@@ -1,0 +1,47 @@
+#pragma once
+#include <JuceHeader.h>
+
+class FlangeriftProcessor : public juce::AudioProcessor
+{
+public:
+    FlangeriftProcessor();
+    ~FlangeriftProcessor() override;
+
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
+
+    const juce::String getName() const override;
+    bool acceptsMidi() const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
+    double getTailLengthSeconds() const override;
+
+    int getNumPrograms() override;
+    int getCurrentProgram() override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String& newName) override;
+
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+
+private:
+    juce::AudioParameterFloat* flangerRate;
+    juce::AudioParameterFloat* flangerDepth;
+    juce::AudioParameterFloat* flangerFeedback;
+    juce::AudioParameterFloat* flangerMix;
+    juce::AudioParameterFloat* filterCutoff;
+    juce::AudioParameterFloat* filterResonance;
+    juce::AudioParameterFloat* filterMix;
+
+    juce::AudioBuffer<float> delayBuffer;
+    int writePosition = 0;
+    float lfoPhase = 0.0f;
+    double currentSampleRate = 44100.0;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlangeriftProcessor)
+};
