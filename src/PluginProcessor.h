@@ -1,22 +1,21 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_dsp/juce_dsp.h>
 
-class FlangeriftProcessor : public juce::AudioProcessor
+class FlangeriftAudioProcessor  : public juce::AudioProcessor
 {
 public:
-    FlangeriftProcessor();
-    ~FlangeriftProcessor() override;
+    FlangeriftAudioProcessor();
+    ~FlangeriftAudioProcessor() override;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
-    #ifndef JucePlugin_PreferredChannelConfigurations
-    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
-    #endif
+   #ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+   #endif
 
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -30,26 +29,13 @@ public:
 
     int getNumPrograms() override;
     int getCurrentProgram() override;
-    void setCurrentProgram(int index) override;
-    const juce::String getProgramName(int index) override;
-    void changeProgramName(int index, const juce::String& newName) override;
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
+    void changeProgramName (int index, const juce::String& newName) override;
 
-    void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
+    void getStateInformation (juce::MemoryBlock& destData) override;
+    void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
-    juce::AudioParameterFloat* flangerRate;
-    juce::AudioParameterFloat* flangerDepth;
-    juce::AudioParameterFloat* flangerFeedback;
-    juce::AudioParameterFloat* flangerMix;
-    juce::AudioParameterFloat* filterCutoff;
-    juce::AudioParameterFloat* filterResonance;
-    juce::AudioParameterFloat* filterMix;
-
-    juce::AudioBuffer<float> delayBuffer;
-    int writePosition;
-    float lfoPhase;
-    double currentSampleRate;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FlangeriftProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FlangeriftAudioProcessor)
 };
