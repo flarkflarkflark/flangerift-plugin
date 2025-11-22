@@ -33,7 +33,7 @@ jobs:
           libxi-dev \
           libgl1-mesa-dev \
           libfreetype6-dev \
-          libwebkit2gtk-4.0-dev
+          libwebkit2gtk-4.1-dev
     
     - name: Get JUCE
       run: |
